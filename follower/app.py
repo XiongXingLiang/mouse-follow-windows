@@ -7,35 +7,42 @@ from .license_core import LicenseError
 from .license_store import LicenseManager,device_code,data_dir
 from .paths import ASSETS
 
-def main():
-    enable_dpi_awareness();root=tk.Tk();root.title('鼠标跟随助手');root.geometry('620x790');root.minsize(580,680)
+def main(*,license_factory=None,owner_edition=False):
+    enable_dpi_awareness();root=tk.Tk();root.title('鼠标跟随助手 · 管理员永久版' if owner_edition else '鼠标跟随助手');root.geometry('620x790');root.minsize(580,680)
     if platform.system()!='Windows':messagebox.showerror('仅支持 Windows','请在 Windows 10/11 64 位系统运行。');root.destroy();return
     logging.basicConfig(filename=data_dir()/'app.log',level=logging.INFO,format='%(asctime)s %(levelname)s %(message)s')
-    try:public=(ASSETS/'license-public.pem').read_bytes();device=device_code();manager=LicenseManager(public,device)
+    try:
+        if license_factory is None:
+            public=(ASSETS/'license-public.pem').read_bytes();device=device_code();manager=LicenseManager(public,device)
+        else:
+            manager=license_factory();device=''
     except Exception as exc:messagebox.showerror('启动失败',str(exc));root.destroy();return
     from .runtime import Runtime
     from .detection import Region
     from PIL import Image,ImageTk
-    runtime=Runtime(manager);runtime.start();status=tk.StringVar(value='请激活后开始监测');license_text=tk.StringVar(value='尚未激活')
+    runtime=Runtime(manager);runtime.start();status=tk.StringVar(value='管理员永久版，可直接开始监测' if owner_edition else '请激活后开始监测');license_text=tk.StringVar(value='尚未激活')
     if manager.grant:license_text.set(manager.grant.description)
     elif manager.error:license_text.set(manager.error)
     frame=ttk.Frame(root,padding=16);frame.pack(fill='both',expand=True)
-    ttk.Label(frame,text='鼠标跟随助手',font=('Microsoft YaHei UI',18,'bold')).pack(anchor='w')
+    ttk.Label(frame,text='鼠标跟随助手 · 管理员版' if owner_edition else '鼠标跟随助手',font=('Microsoft YaHei UI',18,'bold')).pack(anchor='w')
     ttk.Label(frame,textvariable=license_text,wraplength=550).pack(anchor='w',pady=(6,12))
-    ttk.Label(frame,text='本机设备码（发送给授权签发者）：').pack(anchor='w')
-    code=ttk.Entry(frame);code.insert(0,device);code.configure(state='readonly');code.pack(fill='x',pady=4)
-    buttons=ttk.Frame(frame);buttons.pack(fill='x')
-    def copy_device():root.clipboard_clear();root.clipboard_append(device);status.set('设备码已复制')
-    def activate():
-        runtime.stop();dialog=tk.Toplevel(root);dialog.title('导入激活码');dialog.geometry('560x280');dialog.transient(root)
-        ttk.Label(dialog,text='粘贴你收到的激活码：').pack(anchor='w',padx=12,pady=10)
-        text=tk.Text(dialog,height=8,wrap='char');text.pack(fill='both',expand=True,padx=12)
-        def submit():
-            try:grant=manager.activate(text.get('1.0','end').strip());license_text.set(grant.description);status.set('激活成功');dialog.destroy()
-            except Exception as exc:messagebox.showerror('激活失败',str(exc),parent=dialog)
-        ttk.Button(dialog,text='激活',command=submit).pack(pady=10)
-    ttk.Button(buttons,text='复制设备码',command=copy_device).pack(side='left')
-    ttk.Button(buttons,text='导入激活码',command=activate).pack(side='left',padx=8)
+    if owner_edition:
+        ttk.Label(frame,text='管理员自用 · 永久使用 · 无需设备码或激活码').pack(anchor='w')
+    else:
+        ttk.Label(frame,text='本机设备码（发送给授权签发者）：').pack(anchor='w')
+        code=ttk.Entry(frame);code.insert(0,device);code.configure(state='readonly');code.pack(fill='x',pady=4)
+        buttons=ttk.Frame(frame);buttons.pack(fill='x')
+        def copy_device():root.clipboard_clear();root.clipboard_append(device);status.set('设备码已复制')
+        def activate():
+            runtime.stop();dialog=tk.Toplevel(root);dialog.title('导入激活码');dialog.geometry('560x280');dialog.transient(root)
+            ttk.Label(dialog,text='粘贴你收到的激活码：').pack(anchor='w',padx=12,pady=10)
+            text=tk.Text(dialog,height=8,wrap='char');text.pack(fill='both',expand=True,padx=12)
+            def submit():
+                try:grant=manager.activate(text.get('1.0','end').strip());license_text.set(grant.description);status.set('激活成功');dialog.destroy()
+                except Exception as exc:messagebox.showerror('激活失败',str(exc),parent=dialog)
+            ttk.Button(dialog,text='激活',command=submit).pack(pady=10)
+        ttk.Button(buttons,text='复制设备码',command=copy_device).pack(side='left')
+        ttk.Button(buttons,text='导入激活码',command=activate).pack(side='left',padx=8)
     ttk.Separator(frame).pack(fill='x',pady=14)
     from mss import mss
     with mss() as s:monitors=[dict(m) for m in s.monitors[1:]]
