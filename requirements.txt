@@ -1,0 +1,5 @@
+numpy>=2.2,<3
+opencv-python-headless>=4.12,<6
+mss>=10,<12
+cryptography>=46,<49
+Pillow>=11,<14
