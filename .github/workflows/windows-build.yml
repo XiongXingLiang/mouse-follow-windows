@@ -44,6 +44,13 @@ jobs:
           path: dist/owner/
           if-no-files-found: error
           retention-days: 30
+      - name: Upload permanent admin client (keep private)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MouseFollowerAdmin-Permanent-Windows-x64
+          path: dist/admin-client/
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:

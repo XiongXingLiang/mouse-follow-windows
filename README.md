@@ -6,7 +6,7 @@
 - Esc 紧急停止，F8 暂停/恢复；丢失画面、低匹配、结束提示或到期即停止指针控制。
 - 一机一码：永久、30 天、3 天体验，离线 Ed25519 签名。
 - 管理员签发工具单独构建；私钥不在仓库和任何 exe 中。
-- GitHub Actions 在 Windows 构建两个独立 exe 并运行自检。
+- GitHub Actions 在 Windows 构建使用者客户端、管理员永久自用版和授权签发工具三个独立 exe 并运行自检。
 
 [用户说明](docs/USER-GUIDE.md) · [管理员说明](docs/OWNER-GUIDE.md)
 
@@ -36,3 +36,7 @@ python -m admin.issuer keygen --private C:\OwnerSecrets\owner-private.pem --publ
 - `.github/workflows/windows-build.yml`：Windows 构建与产物。
 
 识别仍可能偏离；必须提供目标最初的白色阶段。完全离线授权存在常见的本地绕过边界，详见管理员说明。此仓库不包含用户录屏、实验缓存或私钥。
+
+## 管理员永久自用版
+
+Actions 产物 `MouseFollowerAdmin-Permanent-Windows-x64` 内的 `MouseFollowerAdmin.exe` 无需设备码和激活码，永久使用。只供所有者保管，不要分发给使用者。详见 [管理员自用说明](docs/ADMIN-EDITION.md)。

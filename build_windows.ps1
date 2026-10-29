@@ -8,16 +8,20 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name MouseFollo
 if ($LASTEXITCODE -ne 0) { throw 'Client build failed.' }
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name LicenseIssuer --exclude-module cv2 --exclude-module numpy --exclude-module mss --exclude-module PIL issuer_main.py
 if ($LASTEXITCODE -ne 0) { throw 'Issuer build failed.' }
-foreach ($exe in @('MouseFollower.exe','LicenseIssuer.exe')) {
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name MouseFollowerAdmin --add-data "follower/assets:follower/assets" owner_main.py
+if ($LASTEXITCODE -ne 0) { throw 'Owner client build failed.' }
+foreach ($exe in @('MouseFollower.exe','LicenseIssuer.exe','MouseFollowerAdmin.exe')) {
     $process = Start-Process -FilePath (Join-Path $PWD "dist/$exe") -ArgumentList '--self-test' -PassThru -Wait
     if ($process.ExitCode -ne 0) { throw "Packaged executable self-test failed: $exe" }
 }
-New-Item -ItemType Directory -Force dist/client, dist/owner | Out-Null
+New-Item -ItemType Directory -Force dist/client, dist/owner, dist/admin-client | Out-Null
 Copy-Item dist/MouseFollower.exe dist/client/
 Copy-Item docs/USER-GUIDE.md dist/client/
 Copy-Item THIRD-PARTY-NOTICES.md dist/client/
 Copy-Item dist/LicenseIssuer.exe dist/owner/
 Copy-Item docs/OWNER-GUIDE.md dist/owner/
 Copy-Item follower/assets/license-public.pem dist/owner/
-Get-FileHash dist/MouseFollower.exe, dist/LicenseIssuer.exe -Algorithm SHA256 | Format-Table | Out-String | Set-Content dist/SHA256SUMS.txt
+Copy-Item dist/MouseFollowerAdmin.exe dist/admin-client/
+Copy-Item docs/ADMIN-EDITION.md dist/admin-client/
+Get-FileHash dist/MouseFollower.exe, dist/LicenseIssuer.exe, dist/MouseFollowerAdmin.exe -Algorithm SHA256 | Format-Table | Out-String | Set-Content dist/SHA256SUMS.txt
 Write-Host 'Client and owner-only distributions built separately.'
