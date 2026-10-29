@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.deps/
+build/
+dist/
+*.spec
+.owner-secrets/
+*private*.pem
+*private*.key
+*.license
+activation*.bin
+issued-licenses/
+*.log
+.DS_Store

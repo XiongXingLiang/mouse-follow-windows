@@ -1,0 +1,52 @@
+name: Build Windows EXE
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Verify repository excludes signing secrets
+        shell: pwsh
+        run: |
+          $bad = Get-ChildItem -Recurse -File -Include *.pem,*.key | Select-String -Pattern 'BEGIN .*PRIVATE KEY'
+          if ($bad) { throw 'Private signing key found in checkout.' }
+      - name: Test, build and smoke-test executables
+        shell: pwsh
+        run: ./build_windows.ps1
+      - name: Upload client (distribute this)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MouseFollower-Windows-x64
+          path: dist/client/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload owner tool (keep private)
+        uses: actions/upload-artifact@v4
+        with:
+          name: LicenseIssuer-OwnerOnly-Windows-x64
+          path: dist/owner/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: dist/SHA256SUMS.txt
+          retention-days: 30
