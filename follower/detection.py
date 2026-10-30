@@ -66,12 +66,12 @@ class EndDetector:
         points=cv2.findNonZero(mask)
         if points is None:raise RuntimeError('结束提示模板为空')
         x,y,w,h=cv2.boundingRect(points);self.mask=mask[y:y+h,x:x+w]
+        self.templates=[cv2.resize(self.mask,None,fx=scale/2,fy=scale/2,interpolation=cv2.INTER_NEAREST) for scale in [.75,.9,1.,1.1,1.25]]
     def detect(self,game):
         normalized=cv2.resize(game,(678,450));mask=caption_mask(normalized)
         # Completion message belongs to the central game area, not chrome/score labels.
-        search=mask[90:370,100:590]
-        for scale in [.75,.9,1.,1.1,1.25]:
-            template=cv2.resize(self.mask,None,fx=scale,fy=scale,interpolation=cv2.INTER_NEAREST)
+        search=cv2.resize(mask[90:370,100:590],(245,140),interpolation=cv2.INTER_NEAREST)
+        for template in self.templates:
             if template.shape[0]>=search.shape[0] or template.shape[1]>=search.shape[1]:continue
             _,score,_,_=cv2.minMaxLoc(cv2.matchTemplate(search,template,cv2.TM_CCOEFF_NORMED))
             if score>.60:return True

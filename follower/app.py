@@ -8,7 +8,7 @@ from .license_store import LicenseManager,device_code,data_dir
 from .paths import ASSETS
 
 def main(*,license_factory=None,owner_edition=False):
-    enable_dpi_awareness();root=tk.Tk();root.title('鼠标跟随助手 · 管理员永久版' if owner_edition else '鼠标跟随助手');root.geometry('620x790');root.minsize(580,680)
+    enable_dpi_awareness();root=tk.Tk();root.title('鼠标跟随助手 · 管理员永久版' if owner_edition else '鼠标跟随助手');root.title(root.title()+' · 性能版 10.30');root.geometry('620x790');root.minsize(580,680)
     if platform.system()!='Windows':messagebox.showerror('仅支持 Windows','请在 Windows 10/11 64 位系统运行。');root.destroy();return
     logging.basicConfig(filename=data_dir()/'app.log',level=logging.INFO,format='%(asctime)s %(levelname)s %(message)s')
     try:
