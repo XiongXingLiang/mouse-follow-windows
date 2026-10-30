@@ -44,6 +44,22 @@ class VisualTracker:
             return TrackResult(tuple(self.center),1.,'white')
         age=now-self.started;dt=max(.01,min(.2,now-self.last_time));self.last_time=now
         x,y,bw,bh=self.initial;previous=self.frames[max(0,len(self.frames)-3)]
+        # While the initial bright target remains visible, expensive motion and
+        # shape estimation cannot improve on its directly observed center.
+        prediction=self.center+.5*self.velocity*min(2.,dt*30)
+        distance=(self.xx-prediction[0])**2+(self.yy-prediction[1])**2
+        nearby=self.valid.copy()
+        nearby[distance>(max(bw,bh)*.8)**2]=0
+        white=find_white(frame,nearby)
+        if white is not None:
+            box,_,_=white;wx,wy,ww,wh=box;old=self.center.copy()
+            self.center=np.array([wx+ww/2,wy+wh/2],float)
+            self.center=np.clip(self.center,[40,90],[gray.shape[1]-25,gray.shape[0]-80])
+            self.velocity=.6*self.velocity+.4*np.clip((self.center-old)/max(.5,dt*30),-12,12)
+            self.frames.append(gray)
+            if len(self.frames)>4:self.frames.pop(0)
+            self.missing=0
+            return TrackResult(tuple(map(float,self.center)),1.,'white')
         signal,_,_,diag=compensated_residual(previous,gray,self.valid,self.center)
         flow,flowdiag=regular_flow_residual(previous,gray,self.valid,self.center,self.dis)
         prediction=self.center+.5*self.velocity*min(2.,dt*30)
@@ -60,12 +76,8 @@ class VisualTracker:
         for j in range(1,n):
             if stats[j,4]>=35:keep[j]=255
         evidence=keep[labels];fit=self.fitter.fit(evidence,prediction,100,allowed_centers=allowed)
-        # A white anchor may remain on screen throughout a longer countdown.
-        nearby=allowed.copy();nearby[distance>(max(bw,bh)*.8)**2]=0
-        white=find_white(frame,nearby);old=self.center.copy()
-        if white is not None:
-            box,_,_=white;wx,wy,ww,wh=box;self.center=np.array([wx+ww/2,wy+wh/2]);score=1.;mode='white';angle=0.;scale=1.
-        elif fit is not None and fit['match']>.35 and diag['ok'] and flowdiag['flow_ok']:
+        old=self.center.copy()
+        if fit is not None and fit['match']>.35 and diag['ok'] and flowdiag['flow_ok']:
             self.center=.15*prediction+.85*fit['center'];score=fit['match'];mode='geometry';angle=fit['angle'];scale=fit['scale']
         else:
             self.center=prediction;self.velocity*=.7;score=0.;mode='uncertain';angle=0.;scale=1.

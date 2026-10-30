@@ -10,14 +10,21 @@ def estimate_background(previous,current,valid,exclude_center=None,exclude_radiu
     mask=valid.copy()
     if exclude_center is not None:
         cv2.circle(mask,tuple(np.rint(exclude_center).astype(int)),int(exclude_radius),0,-1)
-    p=cv2.goodFeaturesToTrack(previous,500,.012,8,mask=mask)
+    # Sparse features and LK operate on a smaller pyramid; fit the affine in
+    # original coordinates so the residual and target geometry stay full size.
+    h,w=previous.shape;size=(w//2,h//2)
+    ratio=np.array([w/size[0],h/size[1]],np.float32)
+    previous_small=cv2.resize(previous,size,interpolation=cv2.INTER_AREA)
+    current_small=cv2.resize(current,size,interpolation=cv2.INTER_AREA)
+    mask_small=cv2.resize(mask,size,interpolation=cv2.INTER_NEAREST)
+    p=cv2.goodFeaturesToTrack(previous_small,500,.012,4,mask=mask_small)
     fail={'ok':False,'points':0,'inliers':0,'before_median':None,'after_median':None}
     if p is None or len(p)<10:return np.eye(2,3,dtype=np.float32),fail
-    q,st,_=cv2.calcOpticalFlowPyrLK(previous,current,p,None,winSize=(27,27),maxLevel=4)
-    back,bst,_=cv2.calcOpticalFlowPyrLK(current,previous,q,None,winSize=(27,27),maxLevel=4)
-    good=(st.ravel()>0)&(bst.ravel()>0)&(np.linalg.norm(back-p,axis=2).ravel()<1.2)
+    q,st,_=cv2.calcOpticalFlowPyrLK(previous_small,current_small,p,None,winSize=(15,15),maxLevel=3)
+    back,bst,_=cv2.calcOpticalFlowPyrLK(current_small,previous_small,q,None,winSize=(15,15),maxLevel=3)
+    good=(st.ravel()>0)&(bst.ravel()>0)&(np.linalg.norm((back-p)*ratio,axis=2).ravel()<1.2)
     if good.sum()<10:return np.eye(2,3,dtype=np.float32),fail
-    affine,inliers=cv2.estimateAffinePartial2D(p[good],q[good],method=cv2.RANSAC,ransacReprojThreshold=1.25,maxIters=2000)
+    affine,inliers=cv2.estimateAffinePartial2D(p[good]*ratio,q[good]*ratio,method=cv2.RANSAC,ransacReprojThreshold=1.25,maxIters=2000)
     if affine is None or inliers.sum()<10:return np.eye(2,3,dtype=np.float32),fail
     h,w=previous.shape;aligned=cv2.warpAffine(previous,affine,(w,h))
     # Compare corresponding background pixels, excluding the target and invalid borders.
